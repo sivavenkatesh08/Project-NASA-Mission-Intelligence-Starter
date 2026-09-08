@@ -1,0 +1,163 @@
+NASA RAG Evaluation Dataset
+=============================
+
+Purpose:
+Use these questions to test the NASA RAG chatbot and evaluate answer quality.
+For each question, compare the chatbot response with the relevant retrieved
+context from your NASA mission documents.
+
+Questions
+---------
+
+1. What was Apollo 11?
+
+Expected answer:
+Apollo 11 was the first crewed NASA mission to land humans on the Moon.
+
+2. Who were the astronauts on Apollo 11?
+
+Expected answer:
+The Apollo 11 crew consisted of Neil Armstrong, Buzz Aldrin, and Michael Collins.
+
+3. Who was the first person to step onto the Moon during Apollo 11?
+
+Expected answer:
+Neil Armstrong was the first person to step onto the Moon.
+
+4. What was the main objective of the Apollo 11 mission?
+
+Expected answer:
+The primary objective was to land astronauts on the Moon and safely return them to Earth.
+
+5. What was Apollo 13?
+
+Expected answer:
+Apollo 13 was a NASA lunar mission that experienced a major in-flight emergency and did not complete its planned lunar landing.
+
+6. What happened during the Apollo 13 mission?
+
+Expected answer:
+An oxygen-tank failure caused a serious spacecraft emergency, forcing the crew to abort the lunar landing and use the lunar module as a lifeboat.
+
+7. Why is Apollo 13 considered a successful failure?
+
+Expected answer:
+Although the planned lunar landing was not completed, the crew survived and returned safely to Earth after extensive mission-control efforts.
+
+8. What was the Challenger mission?
+
+Expected answer:
+Space Shuttle Challenger was a NASA Space Shuttle orbiter that flew multiple missions and was lost in the Space Shuttle Challenger disaster in 1986.
+
+9. What happened to Space Shuttle Challenger?
+
+Expected answer:
+Challenger broke apart shortly after launch on January 28, 1986, resulting in the loss of all seven crew members.
+
+10. How many crew members were aboard Challenger during the 1986 disaster?
+
+Expected answer:
+Seven crew members were aboard Challenger during the disaster.
+
+11. Compare Apollo 11 and Apollo 13.
+
+Expected answer:
+Apollo 11 achieved the first crewed lunar landing, while Apollo 13 had to abort its lunar landing after a major spacecraft emergency and focused on returning its crew safely to Earth.
+
+12. What role did mission control play in Apollo 13?
+
+Expected answer:
+Mission control worked with the astronauts to manage the emergency, develop procedures and solutions, conserve resources, and guide the spacecraft safely back to Earth.
+
+13. What is a flight plan in the context of a NASA mission?
+
+Expected answer:
+A flight plan describes the planned sequence of mission activities, procedures, timelines, and operations for a spacecraft and its crew.
+
+14. What types of documents are available in the NASA RAG dataset?
+
+Expected answer:
+The project dataset can contain mission transcripts, technical documents, audio transcriptions, flight plans and procedures, including text data associated with Apollo 11, Apollo 13, and Challenger.
+
+15. Which NASA missions are represented in the project data?
+
+Expected answer:
+The project data is organized around Apollo 11, Apollo 13, and Challenger.
+
+16. What is the purpose of retrieving documents before generating a response?
+
+Expected answer:
+Retrieved documents provide relevant source information that the language model can use to generate a grounded answer instead of relying only on its general knowledge.
+
+17. What should the chatbot do when the answer is not available in the retrieved NASA documents?
+
+Expected answer:
+It should clearly state that the information is not available in the provided documents rather than inventing an answer.
+
+18. What is RAGAS used for in this project?
+
+Expected answer:
+RAGAS is used to evaluate the quality of RAG responses using metrics related to response relevance, faithfulness, context precision, and other evaluation measures.
+
+19. What is mission-specific filtering?
+
+Expected answer:
+Mission-specific filtering restricts document retrieval to a selected mission, such as Apollo 11, Apollo 13, or Challenger.
+
+20. Why is conversation history useful in the NASA RAG chatbot?
+
+Expected answer:
+Conversation history allows the language model to understand previous questions and answers and maintain context across multiple turns.
+
+Negative / Robustness Questions
+-------------------------------
+
+21. What was the landing site of Apollo 11?
+
+Expected behavior:
+Answer from the retrieved documents if the information is available. Do not invent
+a landing site if it is not present in the retrieved context.
+
+22. What was the exact temperature inside the Apollo 13 command module at a specific time?
+
+Expected behavior:
+Use the NASA documents if they contain the requested value. Otherwise, state
+that the information is not available in the provided documents.
+
+23. Who was the commander of a fictional NASA mission called Apollo 99?
+
+Expected behavior:
+State that the information is not available or that Apollo 99 is not represented
+in the provided NASA documents. Do not fabricate an astronaut.
+
+24. What was the Challenger mission's favorite color?
+
+Expected behavior:
+State that this information is not available in the provided mission documents.
+Do not invent an answer.
+
+Suggested Evaluation Procedure
+------------------------------
+
+For each question:
+
+1. Enter the question into the Streamlit NASA RAG chatbot.
+2. Record the generated answer.
+3. Check the retrieved contexts shown/used by the application.
+4. Compare the answer with the expected answer where applicable.
+5. Check whether the answer is supported by the retrieved context.
+6. Run RAGAS evaluation when enabled.
+7. Record the returned metric scores.
+
+Recommended metrics to observe:
+- Faithfulness
+- Response Relevancy
+- Context Precision
+- BLEU
+- ROUGE
+
+Note:
+The expected answers above are reference answers for evaluation. Your actual
+NASA documents should be treated as the authoritative source for document-grounded
+answers. If a detail is absent from the documents, the chatbot should acknowledge
+that rather than relying on an unsupported claim.

@@ -1,19 +1,20 @@
-import os
-from typing import Dict, List, Optional
+from ragas.llms import LangchainLLMWrapper
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
+from typing import Dict, List
 
-from openai import AsyncOpenAI
-
-from ragas.llms import llm_factory
-from ragas.embeddings import embedding_factory
-
+# RAGAS imports
 try:
-    from ragas.metrics.collections import (
-        AnswerRelevancy,
-        Faithfulness,
-        ContextPrecisionWithoutReference,
+    from ragas import SingleTurnSample
+    from ragas.metrics import (
         BleuScore,
+        NonLLMContextPrecisionWithReference,
+        ResponseRelevancy,
+        Faithfulness,
         RougeScore,
     )
+    from ragas import evaluate
 
     RAGAS_AVAILABLE = True
 
@@ -21,165 +22,75 @@ except ImportError:
     RAGAS_AVAILABLE = False
 
 
-def _get_score_value(result) -> float:
-    """Extract a numeric score from a RAGAS MetricResult."""
-
-    value = getattr(
-        result,
-        "value",
-        result,
-    )
-
-    return float(value)
-
-
 def evaluate_response_quality(
     question: str,
     answer: str,
-    contexts: List[str],
-    reference: Optional[str] = None,
-    openai_key: Optional[str] = None,
+    contexts: List[str]
 ) -> Dict[str, float]:
-    """
-    Evaluate a RAG response using RAGAS 0.4.x metrics.
-
-    Without a reference answer, evaluates:
-    - Faithfulness
-    - Answer Relevancy
-    - Context Precision
-
-    When a reference answer is supplied, also evaluates:
-    - BLEU
-    - ROUGE
-    """
+    """Evaluate response quality using RAGAS metrics."""
 
     if not RAGAS_AVAILABLE:
-        return {
-            "error": "RAGAS is not available."
-        }
-
-    api_key = (
-        openai_key
-        or os.getenv("OPENAI_API_KEY")
-    )
-
-    if not api_key:
-        return {
-            "error": "OpenAI API key is required for RAGAS evaluation."
-        }
-
-    if not question.strip():
-        return {
-            "error": "Question cannot be empty."
-        }
-
-    if not answer.strip():
-        return {
-            "error": "Answer cannot be empty."
-        }
-
-    if not contexts:
-        return {
-            "error": "At least one retrieved context is required."
-        }
+        return {"error": "RAGAS not available"}
 
     try:
-        openai_client = AsyncOpenAI(
-            api_key=api_key
+        # Create evaluator LLM
+        evaluator_llm = LangchainLLMWrapper(
+            ChatOpenAI(
+                model="gpt-3.5-turbo",
+                temperature=0
+            )
         )
 
-        evaluator_llm = llm_factory(
-            "gpt-3.5-turbo",
-            client=openai_client,
+        # Create evaluator embeddings
+        evaluator_embeddings = LangchainEmbeddingsWrapper(
+            OpenAIEmbeddings(
+                model="text-embedding-3-small"
+            )
         )
 
-        evaluator_embeddings = embedding_factory(
-            provider="openai",
-            model="text-embedding-3-small",
-            client=openai_client,
-        )
+        # Define evaluation metrics
+        metrics = [
+            BleuScore(),
+            NonLLMContextPrecisionWithReference(),
+            ResponseRelevancy(
+                llm=evaluator_llm,
+                embeddings=evaluator_embeddings
+            ),
+            Faithfulness(
+                llm=evaluator_llm
+            ),
+            RougeScore(),
+        ]
 
-        scores: Dict[str, float] = {}
-
-        # -------------------------------------------------------------
-        # RAG-specific metrics
-        # -------------------------------------------------------------
-
-        faithfulness = Faithfulness(
-            llm=evaluator_llm
-        )
-
-        answer_relevancy = AnswerRelevancy(
-            llm=evaluator_llm,
-            embeddings=evaluator_embeddings,
-        )
-
-        context_precision = ContextPrecisionWithoutReference(
-            llm=evaluator_llm
-        )
-
-        faithfulness_result = faithfulness.score(
+        # Create a RAGAS sample
+        sample = SingleTurnSample(
             user_input=question,
             response=answer,
             retrieved_contexts=contexts,
         )
 
-        scores["faithfulness"] = _get_score_value(
-            faithfulness_result
+        # Evaluate the response
+        result = evaluate(
+            dataset=[sample],
+            metrics=metrics,
         )
 
-        relevancy_result = answer_relevancy.score(
-            user_input=question,
-            response=answer,
-        )
+        # Convert evaluation result to dictionary
+        result_dict = dict(result)
 
-        scores["answer_relevancy"] = _get_score_value(
-            relevancy_result
-        )
+        # Return numerical scores
+        scores = {}
 
-        context_result = context_precision.score(
-            user_input=question,
-            response=answer,
-            retrieved_contexts=contexts,
-        )
-
-        scores["context_precision"] = _get_score_value(
-            context_result
-        )
-
-        # -------------------------------------------------------------
-        # Reference-based metrics
-        # -------------------------------------------------------------
-
-        if reference and reference.strip():
-            bleu = BleuScore()
-
-            rouge = RougeScore(
-                rouge_type="rougeL",
-                mode="fmeasure",
-            )
-
-            bleu_result = bleu.score(
-                reference=reference,
-                response=answer,
-            )
-
-            scores["bleu"] = _get_score_value(
-                bleu_result
-            )
-
-            rouge_result = rouge.score(
-                reference=reference,
-                response=answer,
-            )
-
-            scores["rouge"] = _get_score_value(
-                rouge_result
-            )
+        for metric_name, score in result_dict.items():
+            try:
+                if score is not None:
+                    scores[metric_name] = float(score)
+            except (TypeError, ValueError):
+                continue
 
         return scores
 
-    except Exception as exc:
+    except Exception as e:
         return {
-            "error": str(exc)
+            "error": str(e)
         }
